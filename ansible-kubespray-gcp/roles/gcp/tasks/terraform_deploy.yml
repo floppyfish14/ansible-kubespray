@@ -1,0 +1,7 @@
+---
+- name: deploy google compute resources with terraform
+  terraform:
+    project_path: "{{ role_path }}/templates/"
+    variables_file: "{{ role_path }}/templates/variables.tf"
+    state: present
+    force_init: yes

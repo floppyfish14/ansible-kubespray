@@ -1,0 +1,208 @@
+---
+- set_fact: 
+    home: "{{lookup('env', 'HOME') }}"
+
+- name: gcp | creating compute disk resources for masters
+  gcp_compute_disk:
+    name: "{{ item }}"
+    zone: "{{ GCP_COMPUTE_ZONE }}"
+    type: "pd-standard"
+    size_gb: "{{ GCP_COMPUTE_DISK_SIZE_GB }}"
+    project: "{{ GCP_PROJECT_NAME }}"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+  register: "master_disk_self"
+  loop: "{{ GCP_COMPUTE_MASTER_INSTANCES }}"
+
+- name: gcp | creating compute disk resources for workers
+  gcp_compute_disk:
+    name: "{{ item }}"
+    zone: "{{ GCP_COMPUTE_ZONE }}"
+    type: "pd-standard"
+    size_gb: "{{ GCP_COMPUTE_DISK_SIZE_GB }}"
+    project: "{{ GCP_PROJECT_NAME }}"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+  register: "worker_disk_self"
+  loop: "{{ GCP_COMPUTE_WORKER_INSTANCES }}"
+
+- name: gcp | creating compute network resources
+  gcp_compute_network:
+    name: "{{ GCP_COMPUTE_NETWORK_NAME }}"
+    auto_create_subnetworks: 'false'
+    project: "{{ GCP_PROJECT_NAME }}"
+    routing_config:
+      routing_mode: "REGIONAL"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+  register: "network_self"
+
+- name: gcp | creating compute subnet network resources
+  gcp_compute_subnetwork:
+    name: "{{ GCP_COMPUTE_SUBNETWORK_NAME }}"
+    region: "{{ GCP_COMPUTE_SUBNETWORK_REGION }}"
+    network: "{{ network_self }}"
+    ip_cidr_range: "{{ GCP_COMPUTE_SUBNETWORK_IP_CIDR_RANGE }}"
+    private_ip_google_access: "false"
+    project: "{{ GCP_PROJECT_NAME }}"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+  register: "subnetwork_self"
+
+- name: gcp | creating gcp compute firewall for allow-external
+  gcp_compute_firewall:
+    name: "{{ GCP_PROJECT_NAME }}-allow-external"
+    allowed:
+    - ip_protocol: "tcp"
+      ports:
+      - "22"
+    - ip_protocol: "tcp"
+      ports:
+        - "6443"
+    - ip_protocol: "icmp"
+    source_ranges: "0.0.0.0/0"
+    direction: "ingress"
+    project: "{{ GCP_PROJECT_NAME }}"
+    network: "{{ network_self }}"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+
+- name: gcp | creating gcp compute firewall for allow-internal
+  gcp_compute_firewall:
+    name: "{{ GCP_PROJECT_NAME }}-allow-internal"
+    allowed:
+    - ip_protocol: "tcp"
+    - ip_protocol: "udp"
+    - ip_protocol: "icmp"
+    source_ranges:
+      - "10.240.0.0/24"
+      - "10.200.0.0/16"
+    direction: "ingress"
+    project: "{{ GCP_PROJECT_NAME }}"
+    network: "{{ network_self }}"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+
+- name: gcp | creating gcp compute firewall for allow-health-check
+  gcp_compute_firewall:
+    name: "{{ GCP_PROJECT_NAME }}-allow-health-check"
+    allowed:
+    - ip_protocol: "tcp"
+    source_ranges:
+    # source ip ranges for legacy health checks via google
+    # https://cloud.google.com/load-balancing/docs/health-checks#fw-netlb
+      - "209.85.152.0/22"
+      - "209.85.204.0/22"
+      - "35.191.0.0/16"
+    project: "{{ GCP_PROJECT_NAME }}"
+    network: "{{ network_self }}"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+
+- name: gcp | creating gcp compute networking ipv4 addresses
+  gcp_compute_address:
+    name: "{{ GCP_COMPUTE_ADDRESS_NAME }}"
+    address_type: "EXTERNAL"
+    network_tier: "PREMIUM"
+    region: "{{ GCP_COMPUTE_ADDRESS_REGION }}"
+    project: "{{ GCP_PROJECT_NAME }}"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+
+- name: gcp | creating gcp compute resources for master instances
+  gcp_compute_instance:
+    name: "{{ item }}"
+    disks:
+    - auto_delete: "true"
+      boot: "true"
+      device_name: "persistent-disk-0"
+      initialize_params:
+        source_image: "https://googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts"
+        disk_size_gb: "200"
+        disk_type: "pd-standard"
+      source:
+        selfLink:  "{{ master_disk_self }}"
+      mode: "READ_WRITE"
+    can_ip_forward: "true"
+    deletion_protection: "false"
+    machine_type: "n1-standard-1"
+    network_interfaces:
+    - network: "{{ network_self }}"
+      access_configs:
+      - name: "External NAT"
+        type: "ONE_TO_ONE_NAT"
+#      network_ip: "10.240.0.10"
+      subnetwork: "{{ subnetwork_self }}"
+    project: "{{ GCP_PROJECT_NAME }}"
+    scheduling:
+      automatic_restart: "true"
+      on_host_maintenance: "MIGRATE"
+      preemptible: "false"
+#    service_accounts:
+#      email: "terraformer-sa@kubernetes-demo-cls.iam.gserviceaccount.com"
+#      scopes: ["https://www.googleapis.com/auth/devstorage.read_only", "https://www.googleapis.com/auth/service.management.readonly", "https://www.googleapis.com/auth/logging.write", "https://www.googleapis.com/auth/monitoring", "https://www.googleapis.com/auth/servicecontrol", "https://www.googleapis.com/auth/compute"]
+    zone: "us-west1-c"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+  loop: "{{ GCP_COMPUTE_MASTER_INSTANCES }}"
+
+- name: gcp | creating gcp compute resources for worker instances
+  gcp_compute_instance:
+    name: "{{ item }}"
+    disks:
+    - auto_delete: "true"
+      boot: "true"
+      device_name: "persistent-disk-0"
+      initialize_params:
+        source_image: "https://googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts"
+        disk_size_gb: "200"
+        disk_type: "pd-standard"
+      source:
+        selfLink:  "{{ master_disk_self }}"
+      mode: "READ_WRITE"
+    can_ip_forward: "true"
+    deletion_protection: "false"
+    machine_type: "n1-standard-1"
+    network_interfaces:
+    - network: "{{ network_self }}"
+      access_configs:
+      - name: "External NAT"
+        type: "ONE_TO_ONE_NAT"
+#      network_ip: "10.240.0.10"
+      subnetwork: "{{ subnetwork_self }}"
+    project: "{{ GCP_PROJECT_NAME }}"
+    scheduling:
+      automatic_restart: "true"
+      on_host_maintenance: "MIGRATE"
+      preemptible: "false"
+#    service_accounts:
+#      email: "terraformer-sa@kubernetes-demo-cls.iam.gserviceaccount.com"
+#      scopes: ["https://www.googleapis.com/auth/devstorage.read_only", "https://www.googleapis.com/auth/service.management.readonly", "https://www.googleapis.com/auth/logging.write", "https://www.googleapis.com/auth/monitoring", "https://www.googleapis.com/auth/servicecontrol", "https://www.googleapis.com/auth/compute"]
+    zone: "us-west1-c"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"
+  loop: "{{ GCP_COMPUTE_WORKER_INSTANCES }}"
+
+
+# Post-Instance Creation
+
+- name: gcp | creating compute route resrouce for worker nodes
+  gcp_compute_route:
+    name: "compute-route"
+    dest_range: 10.200.0.0/24
+    #next_hop_ip: 10.240.0.20
+    network: "{{ network_self }}"
+    project: "{{ GCP_PROJECT_NAME }}"
+    auth_kind: "serviceaccount"
+    service_account_file: "{{ home }}/.google-creds.key"
+    state: "present"

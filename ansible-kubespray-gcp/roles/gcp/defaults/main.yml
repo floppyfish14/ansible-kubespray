@@ -1,0 +1,77 @@
+---
+GCP_PROJECT_NAME: "kubernetes-demo-cls"
+GCP_PROJECT_REGION: "us-west1"
+GCP_COMPUTE_ZONE: "us-west1-c"
+
+GCP_PROJECT_LIFECYCLE: "sandbox"
+
+GCP_COMPUTE_MASTER_INSTANCES:
+  - controller-0
+  - controller-1
+  - controller-2
+
+GCP_COMPUTE_WORKER_INSTANCES:
+  - worker-0
+  - worker-1
+  - worker-2
+
+GCP_COMPUTE_INSTANCE_NODE_TYPE:
+  - controller
+  - worker
+
+GCP_IMAGE_FAMILY: "ubuntu-1804-lts"
+GCP_IMAGE_PROJECT: "ubuntu-os-cloud"
+
+GCP_COMPUTE_DISK_SIZE_GB: "200"
+
+
+GCP_COMPUTE_INSTANCE_CAN_IP_FORWARD: "true"
+GCP_COMPUTE_INSTANCE_MACHINE_TYPE: "n1-standard-1"
+# TODO: Loop through 'controller' and 'worker'
+GCP_COMPUTE_INSTANCE_NAME: "controller"
+GCP_COMPUTE_INSTANCE_PROJECT: "kubernetes-demo-cls"
+# TODO: Loop through zones, one instance per zone
+GCP_COMPUTE_INSTANCE_ZONE: "us-west1-c"
+GCP_COMPUTE_INSTANCE_TAGS:
+  - "demo"
+  - "controller"
+GCP_COMPUTE_INSTANCE_DISKS_AUTO_DELETE: "true"
+GCP_COMPUTE_INSTANCE_DISKS_BOOT: "true"
+GCP_COMPUTE_INSTANCE_DISKS_DEVICE_NAME: "persistent-disk-0"
+#GCP_COMPUTE_INSTANCE_DISKS_RSA_ENCRYPTED_KEY: ""
+GCP_COMPUTE_INSTANCE_DISKS_SIZE: "200"
+GCP_COMPUTE_INSTANCE_DISKS_IF: "SCSI"
+GCP_COMPUTE_INSTANCE_DISKS_MODE: "READ_WRITE"
+GCP_COMPUTE_INSTANCE_DISKS_TYPE: "pd-standard"
+GCP_COMPUTE_INSTANCE_DISKS_SOURCE_IMAGE: "{{ GCP_IMAGE_PROJECT }}/{{ GCP_IMAGE_FAMILY }}"
+
+#GCP_COMPUTE_INSTANCE_NETWORK_IF_TIER: "PREMIUM"
+GCP_COMPUTE_INSTANCE_NETWORK: "default"
+GCP_COMPUTE_INSTANCE_NETWORK_IF_SUBNETWORK: ""
+GCP_COMPUTE_INSTANCE_NETWORK_IF_SUBNETWORK_PROJECT: "demo-subnetwork"
+
+GCP_COMPUTE_INSTANCE_SCHED_AUTO_RESTART: "true"
+GCP_COMPUTE_INSTANCE_SCHED_ON_HOST_MAINT: "MIGRATE"
+GCP_COMPUTE_INSTANCE_SCHED_PREEMPTIBLE: "false"
+
+GCP_COMPUTE_INSTANCE_SA_EMAIL: "terraform-sa@imposing-volt-279603.iam.gserviceaccount.com"
+GCP_COMPUTE_INSTANCE_SA_SCOPES:
+  - "https://www.googleapis.com/auth/devstorage.read_only"
+  - "https://www.googleapis.com/auth/service.management.readonly"
+  - "https://www.googleapis.com/auth/logging.write"
+  - "https://www.googleapis.com/auth/monitoring"
+  - "https://www.googleapis.com/auth/servicecontrol"
+  - "https://www.googleapis.com/auth/compute"
+
+GCP_COMPUTE_NETWORK_NAME: "safesecs"
+GCP_COMPUTE_NETWORK_AUTO_CREATE_SUBNETWORKS: "true"
+GCP_COMPUTE_NETWORK_DELETE_DEFAULT_ROUTES_ON_CREATE: "false"
+
+GCP_COMPUTE_SUBNETWORK_NAME: "kubernetes"
+GCP_COMPUTE_SUBNETWORK_IP_CIDR_RANGE: "10.240.0.0/24"
+GCP_COMPUTE_SUBNETWORK_REGION: "us-west1"
+
+GCP_COMPUTE_ADDRESS_NAME: "safesecs"
+GCP_COMPUTE_ADDRESS_REGION: "us-west1"
+
+GCP_COMPUTE_ROUTE: "{{ GCP_PROJECT_NAME }}-route"

@@ -1,0 +1,9 @@
+---
+- name: Deploy Kubernetes cluster to GCP using Terraform and Ansible
+  hosts: localhost
+#  gather_facts: no
+  connection: local
+
+  roles:
+    - role: gcp
+
