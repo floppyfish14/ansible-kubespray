@@ -1,1 +1,2 @@
 # ansible-kubespray
+Deploy a highly-available gcp cluster using Kelsey Hightower's Kubernetes From Scratch as a template. Will deploy 3 Master Nodes and 3 Worker Nodes using terraform and ansible. The deploy playbook will use your google service account token (stored at ~/.google-creds.key) to deploy the resources and automate static IPs and integrations with GCP to allow dynamic provisioning and such. The networking scheme uses calico for cluster networking.
